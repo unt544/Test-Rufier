@@ -1,0 +1,279 @@
+from kivy.app import App
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
+from kivy.uix.textinput import TextInput
+from kivy.core.window import Window
+from kivy.clock import Clock
+from kivy.core.audio import SoundLoader
+
+Window.clearcolor = (0.15, 0.15, 0.16, 1)
+
+def get_ruffier_result(r_index, age):
+    if age < 7:
+        return "Данные для возраста младше 7 лет не поддерживаются."
+    
+    if age == 7 or age == 8:
+        level_excellent = 6.5
+        level_good = 12.0
+        level_satisfactory = 17.0
+        level_poor = 21.0
+    elif age == 9 or age == 10:
+        level_excellent = 5.0
+        level_good = 10.5
+        level_satisfactory = 15.5
+        level_poor = 19.5
+    elif age == 11 or age == 12:
+        level_excellent = 3.5
+        level_good = 9.0
+        level_satisfactory = 14.0
+        level_poor = 18.0
+    elif age == 13 or age == 14:
+        level_excellent = 2.0
+        level_good = 7.5
+        level_satisfactory = 12.5
+        level_poor = 16.5
+    else:
+        level_excellent = 0.5
+        level_good = 6.0
+        level_satisfactory = 11.0
+        level_poor = 15.0
+
+    if r_index <= level_excellent:
+        return "высокая"
+    elif r_index <= level_good:
+        return "выше среднего"
+    elif r_index <= level_satisfactory:
+        return "средняя"
+    elif r_index <= level_poor:
+        return "удовлетворительная"
+    else:
+        return "слабая"
+
+
+class MyScreen1(Screen):
+    def __init__(self, **kwargs):
+        super(MyScreen1, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=50, spacing=30)
+        
+        info_text = (
+            "Данное приложение позволит вам с помощью теста Руфье\n"
+            "провести первичную диагностику вашего здоровья.\n\n"
+            "Проба Руфье представляет собой нагрузочный комплекс,\n"
+            "предназначенный для оценки работоспособности сердца при физической нагрузке.\n\n"
+            "У испытуемого определяют частоту пульса за 15 секунд.\n\n"
+            "Затем в течение 45 секунд испытуемый выполняет 30 приседаний.\n\n"
+            "После окончания нагрузки пульс подсчитывается вновь:\n"
+            "число пульсаций за первые 15 секунд, 30 секунд отдыха,\n"
+            "число пульсаций за последние 15 секунд."
+        )
+        self.lbl = Label(text=info_text, font_size=16, halign='left', valign='top', text_size=(700, None), size_hint=(1, 0.5), color=(0.98, 0.92, 0.84, 1))
+        layout.add_widget(self.lbl)
+        
+        input_grid = GridLayout(cols=2, spacing=15, size_hint=(None, None), width=450, height=90, pos_hint={'x': 0.15})
+        
+        input_grid.add_widget(Label(text='Введите имя:', halign='left', valign='middle', text_size=(150, 40), font_size=16, color=(0.98, 0.92, 0.84, 1)))
+        self.in_name = TextInput(text='', multiline=False, size_hint=(None, None), width=300, height=35, input_filter=lambda text, from_undo: ''.join([c for c in text if c.isalpha()]))
+        input_grid.add_widget(self.in_name)
+        
+        input_grid.add_widget(Label(text='Введите возраст:', halign='left', valign='middle', text_size=(150, 40), font_size=16, color=(0.98, 0.92, 0.84, 1)))
+        self.in_age = TextInput(text='', multiline=False, size_hint=(None, None), width=300, height=35, input_filter='int')
+        input_grid.add_widget(self.in_age)
+        
+        layout.add_widget(input_grid)
+        
+        self.btn = Button(text="Начать", size_hint=(None, None), width=240, height=65, pos_hint={'center_x': 0.5}, background_color=(0.45, 0.25, 0.65, 1), background_normal='', color=(0.98, 0.92, 0.84, 1))
+        self.btn.bind(on_release=self.go_forward)
+        layout.add_widget(self.btn)
+        
+        self.add_widget(layout)
+
+    def go_forward(self, instance):
+        app = App.get_running_app()
+        app.user_name = self.in_name.text
+        try:
+            app.user_age = int(self.in_age.text)
+        except ValueError:
+            app.user_age = 7
+            
+        self.manager.transition = FadeTransition(duration=0.3)
+        self.manager.current = 'scr2'
+
+
+class MyScreen2(Screen):
+    def __init__(self, **kwargs):
+        super(MyScreen2, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=50, spacing=40)
+        
+        self.lbl = Label(
+            text='Замерьте пульс за 15 секунд.\n\nРезультат запишите в соответствующее поле.', 
+            font_size=16, halign='left', valign='top', text_size=(700, None), size_hint=(1, 0.4),
+            color=(0.98, 0.92, 0.84, 1)
+        )
+        layout.add_widget(self.lbl)
+        
+        input_grid = GridLayout(cols=2, spacing=15, size_hint=(None, None), width=450, height=45, pos_hint={'x': 0.15})
+        input_grid.add_widget(Label(text='Введите результат:', halign='left', valign='middle', text_size=(150, 40), font_size=16, color=(0.98, 0.92, 0.84, 1)))
+        self.in_p1 = TextInput(text='', multiline=False, size_hint=(None, None), width=300, height=35, input_filter='int')
+        input_grid.add_widget(self.in_p1)
+        layout.add_widget(input_grid)
+        
+        self.btn = Button(text="Продолжить", size_hint=(None, None), width=240, height=65, pos_hint={'center_x': 0.5}, background_color=(0.45, 0.25, 0.65, 1), background_normal='', color=(0.98, 0.92, 0.84, 1))
+        self.btn.bind(on_release=self.go_forward)
+        layout.add_widget(self.btn)
+        
+        self.add_widget(layout)
+
+    def go_forward(self, instance):
+        app = App.get_running_app()
+        try:
+            app.p1 = int(self.in_p1.text)
+        except ValueError:
+            app.p1 = 0
+            
+        self.manager.transition = FadeTransition(duration=0.3)
+        self.manager.current = 'scr3'
+
+class MyScreen3(Screen):
+    def __init__(self, **kwargs):
+        super(MyScreen3, self).__init__(**kwargs)
+        main_layout = BoxLayout(orientation='vertical', padding=50, spacing=20)
+        
+        timer_layout = BoxLayout(orientation='horizontal', size_hint=(1, 0.35))
+        timer_layout.add_widget(Label(size_hint_x=0.7))
+        
+        right_panel = BoxLayout(orientation='vertical', size_hint=(None, None), width=120, height=110, padding=10, spacing=10)
+        
+        self.timer_label = Label(text="0", font_size=28, size_hint=(1, 0.5), color=(0.98, 0.92, 0.84, 1))
+        right_panel.add_widget(self.timer_label)
+        
+        self.btn_timer = Button(text="Старт", size_hint=(1, 0.5), background_color=(0.45, 0.25, 0.65, 1), background_normal='', color=(0.98, 0.92, 0.84, 1))
+        self.btn_timer.bind(on_release=self.start_timer)
+        right_panel.add_widget(self.btn_timer)
+        
+        timer_layout.add_widget(right_panel)
+        main_layout.add_widget(timer_layout)
+        
+        self.lbl = Label(text='Выполните 30 приседаний за 45 секунд.', font_size=16, halign='center', valign='top', text_size=(700, None), size_hint=(1, 0.35), color=(0.98, 0.92, 0.84, 1))
+        main_layout.add_widget(self.lbl)
+        
+        self.btn = Button(text="Продолжить", size_hint=(None, None), width=240, height=65, pos_hint={'center_x': 0.5}, background_color=(0.45, 0.25, 0.65, 1), background_normal='', color=(0.98, 0.92, 0.84, 1))
+        self.btn.bind(on_release=self.go_forward)
+        main_layout.add_widget(self.btn)
+        
+        self.add_widget(main_layout)
+        self.time_passed = 0
+        self.timer_event = None
+
+    def start_timer(self, instance):
+        if not self.timer_event:
+            self.time_passed = 0
+            self.timer_label.text = "0"
+            self.timer_event = Clock.schedule_interval(self.update_timer, 1)
+
+    def update_timer(self, dt):
+        self.time_passed += 1
+        self.timer_label.text = str(self.time_passed)
+        if self.time_passed >= 45:
+            Clock.unschedule(self.timer_event)
+            self.timer_event = None
+
+    def on_leave(self):
+        if self.timer_event:
+            Clock.unschedule(self.timer_event)
+            self.timer_event = None
+        self.timer_label.text = "0"
+
+    def go_forward(self, instance):
+        self.manager.transition = FadeTransition(duration=0.3)
+        self.manager.current = 'scr4'
+
+
+class MyScreen4(Screen):
+    def __init__(self, **kwargs):
+        super(MyScreen4, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=50, spacing=30)
+        
+        self.lbl = Label(
+            text='В течение минуты замерьте пульс два раза:\n\n'
+                 'за первые 15 секунд минуты, затем за последние 15 секунд.\n\n'
+                 'Результаты запишите в соответствующие поля.', 
+            font_size=16, halign='left', valign='top', text_size=(700, None), size_hint=(1, 0.4),
+            color=(0.98, 0.92, 0.84, 1)
+        )
+        layout.add_widget(self.lbl)
+        
+        input_grid = GridLayout(cols=2, spacing=15, size_hint=(None, None), width=500, height=90, pos_hint={'x': 0.12})
+        
+        input_grid.add_widget(Label(text='Результат:', halign='left', valign='middle', text_size=(200, 40), font_size=16, color=(0.98, 0.92, 0.84, 1)))
+        self.in_p2 = TextInput(text='', multiline=False, size_hint=(None, None), width=300, height=35, input_filter='int')
+        input_grid.add_widget(self.in_p2)
+        
+        input_grid.add_widget(Label(text='Результат после отдыха:', halign='left', valign='middle', text_size=(200, 40), font_size=16, color=(0.98, 0.92, 0.84, 1)))
+        self.in_p3 = TextInput(text='', multiline=False, size_hint=(None, None), width=300, height=35, input_filter='int')
+        input_grid.add_widget(self.in_p3)
+        
+        layout.add_widget(input_grid)
+        
+        self.btn = Button(text="Завершить", size_hint=(None, None), width=240, height=65, pos_hint={'center_x': 0.5}, background_color=(0.45, 0.25, 0.65, 1), background_normal='', color=(0.98, 0.92, 0.84, 1))
+        self.btn.bind(on_release=self.go_forward)
+        layout.add_widget(self.btn)
+        
+        self.add_widget(layout)
+
+    def go_forward(self, instance):
+        app = App.get_running_app()
+        try:
+            app.p2 = int(self.in_p2.text)
+            app.p3 = int(self.in_p3.text)
+        except ValueError:
+            app.p2 = 0
+            app.p3 = 0
+            
+        self.manager.transition = FadeTransition(duration=0.3)
+        self.manager.current = 'scr5'
+
+
+class MyScreen5(Screen):
+    def __init__(self, **kwargs):
+        super(MyScreen5, self).__init__(**kwargs)
+        layout = BoxLayout(orientation='vertical', padding=50)
+        self.lbl = Label(text='', font_size=16, halign='left', valign='middle', text_size=(500, None), color=(0.98, 0.92, 0.84, 1))
+        layout.add_widget(self.lbl)
+        self.add_widget(layout)
+
+    def on_enter(self):
+        app = App.get_running_app()
+        r_index = ((app.p1 + app.p2 + app.p3) * 4 - 200) / 10
+        status = get_ruffier_result(r_index, app.user_age)
+        
+        r_str = str(round(r_index, 1))
+        self.lbl.text = "Ваш индекс Руфье: " + r_str + "\nРаботоспособность сердца:\n" + status
+        
+        sound = SoundLoader.load('apple-pay-succes.mp3')
+        if sound:
+            sound.volume = 1.0
+            sound.play()
+
+
+class MyHeart(App):
+    def build(self):
+        self.user_name = ""
+        self.user_age = 7
+        self.p1 = 0
+        self.p2 = 0
+        self.p3 = 0
+        
+        sm = ScreenManager()
+        sm.add_widget(MyScreen1(name='scr1'))
+        sm.add_widget(MyScreen2(name='scr2'))
+        sm.add_widget(MyScreen3(name='scr3'))
+        sm.add_widget(MyScreen4(name='scr4'))
+        sm.add_widget(MyScreen5(name='scr5'))
+        return sm
+
+
+if __name__ == '__main__':
+    MyHeart().run()
